@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* Existing styles */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px;
+      width: fit-content;
+    }
+
+    select, button {
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 2px solid #625A7C;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .gradient-preview {
+      height: 300px;
+      width: 300px;
+      background: #f0f0f0;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-weight: 600;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="gradient-preview" id="gradientPreview">
+    <button id="generate">Generate New Gradient</button>
+  </div>
+  <div class="container">
+    <label for="gradientType">Gradient Type</label>
+    <select id="gradientType">
+      <option value="GRADIENT_LINEAR">Linear</option>
+      <option value="GRADIENT_RADIAL">Radial</option>
+      <option value="GRADIENT_ANGULAR">Angular</option>
+    </select>
+
+    <label for="colorScheme">Color Scheme</label>
+    <select id="colorScheme">
+      <option value="monochromatic">Monochromatic</option>
+      <option value="complementary">Complementary</option>
+      <option value="triadic">Triadic</option>
+      <option value="tetradic">Tetradic</option>
+    </select>
+
+    <div class="buttons">
+      <button id="apply">Place Gradient</button>
+    </div>
+  </div>
+
+  <script>
+    const gradientTypeDropdown = document.getElementById('gradientType');
+    const colorSchemeDropdown = document.getElementById('colorScheme');
+    const generateButton = document.getElementById('generate');
+    const applyButton = document.getElementById('apply');
+    const gradientPreview = document.getElementById('gradientPreview');
+    let currentGradient = null;
+
+    generateButton.onclick = () => {
+      const gradientType = gradientTypeDropdown.value;
+      const colorScheme = colorSchemeDropdown.value;
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: 'generate-gradient',
+            gradientType: gradientType,
+            colorScheme: colorScheme,
+          },
+        },
+        '*'
+      );
+    };
+
+    applyButton.onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'apply-gradient', gradient: currentGradient } }, '*');
+    };
+
+    onmessage = (event) => {
+      const { type, gradient } = event.data.pluginMessage;
+      if (type === 'update-gradient') {
+        currentGradient = gradient;
+        updateGradientPreview(gradient);
+      }
+    };
+
+    function updateGradientPreview(gradient) {
+      if (!gradient) return;
+      const gradientCSS = convertGradientToCSS(gradient);
+      gradientPreview.style.background = gradientCSS;
+    }
+
+    function convertGradientToCSS(gradient) {
+      const stops = gradient.gradientStops.map(
+        (stop) =>
+          `rgba(${Math.floor(stop.color.r * 255)}, ${Math.floor(stop.color.g * 255)}, ${Math.floor(
+            stop.color.b * 255
+          )}, ${stop.color.a}) ${stop.position * 100}%`
+      );
+
+      if (gradient.type === 'GRADIENT_LINEAR') {
+        return `linear-gradient(90deg, ${stops.join(', ')})`;
+      } else if (gradient.type === 'GRADIENT_RADIAL') {
+        return `radial-gradient(circle, ${stops.join(', ')})`;
+      } else if (gradient.type === 'GRADIENT_ANGULAR') {
+        return `conic-gradient(${stops.join(', ')})`;
+      }
+      return '';
+    }
+  </script>
+</body>
+</html>
